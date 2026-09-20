@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <title>OSAH</title>
+      <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+      <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700' rel='stylesheet'>
+   </head>
+   <body>
+      <div style='width: 820px; background: #f1f1f1; padding: 46px 60px; margin: 0 auto; border: 1px solid #d5d7db;'>
+         <div style='background: #fff; border: 1px solid #d5d7db;'>
+            <div style='padding: 10px 30px;'>
+               <a style='display: inline-block;'>
+                  <img src='https://eportal.osah.ga.gov/external/images/osah-email-logo.jpg' alt='Logo' />
+               </a>
+            </div>
+            <div style='border-top: 1px solid #d5d7db; border-bottom: 1px solid #d5d7db; padding: 60px 30px;'>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0;'>
+                  <%- bodyMessage %>
+                  Regards,
+               </p>
+               <div style='margin-top: 30px;'>
+                  <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 400; color: #3d3c3f; margin: 0 0 10px 0;'><%= fromName %>, MPA</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #3d3c3f; margin: 0 0 10px 0;'>Budget Director<br />Office of State Administrative Hearings</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0;'>Phone: 404-657-2803</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0;'>Fax: 404-657-2803</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0 0 10px 0;'>
+                     Email: <a href='mailto:<%= fromEmail %>' style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #3366cc; text-decoration: none;'><%= fromEmail %></a>
+                  </p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0;'>225 Peachtree Street NE</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0;'>Suite 400</p>
+                  <p style='font-family: Roboto, sans-serif; font-size: 14px; font-weight: 300; color: #9b9b9b; margin: 0;'>Atlanta, GA 30303</p>
+               </div>
+            </div>
+         </div>
+      </div>
+   </body>
+</html>

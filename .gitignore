@@ -1,0 +1,35 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/assets
+/uploads
+
+# user-uploaded runtime data (local dev only — server envs write to EFS instead)
+/public/upload
+/public/file-storage
+
+# testing
+
+# production
+
+# misc
+.tmp
+.DS_Store
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+logs
+
+.env
+
+# code review reports (local-only, not committed)
+CODE_REVIEW_*.md
+CODE REVIEW*.md
+cpd*.txt
+
+# live-verification toolkit (Puppeteer scripts driving a real running instance + real DB -
+# dev-only tooling, not part of the shipped app; see dev-scripts/live-verify/README.md)
+/dev-scripts

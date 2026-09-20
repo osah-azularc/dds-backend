@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Invoice <%= invNo %></title>
+<style>
+  body { font-family: Roboto, Arial, sans-serif; color: #000; margin: 0; }
+  .pdf-page { width: 820px; margin: 0 auto; padding: 32px 0; }
+  .pdf-page.page-one { page-break-after: always; }
+  .logo-cell { text-align: center; padding-bottom: 32px; }
+  .org-heading { font-family: 'Times New Roman', serif; font-size: 24px; font-weight: 700; text-align: center; padding-bottom: 8px; }
+  .org-address-line { font-family: 'Times New Roman', serif; font-size: 18px; font-weight: 700; text-align: center; }
+  .meta-outer-table { margin-top: 50px; }
+  .agency-name { font-size: 16px; font-weight: 700; vertical-align: top; width: 70%; }
+  .meta-details { width: 30%; text-align: right; }
+  .meta-label, .meta-value { font-size: 14px; font-weight: 400; text-align: left; padding: 2px 0; }
+  .meta-label { width: 120px; }
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 50px; }
+  .items-table th { font-size: 12px; font-weight: 700; border-bottom: 1px solid #000; padding: 5px; text-align: left; }
+  .items-table td { font-size: 12px; padding: 8px 5px; }
+  .items-table td.num, .items-table th.num { text-align: right; padding-right: 15px; }
+  .section-header { font-weight: 700; font-size: 12px; padding: 8px 5px; }
+  .total-row td { border-top: 1px solid #000; font-weight: 700; padding: 8px 5px; }
+  .total-row td.num { text-align: right; padding-right: 15px; }
+  .footer-table { width: 100%; margin-top: 50px; }
+  .footer-table td { vertical-align: top; width: 50%; }
+  .footer-heading { font-family: 'Times New Roman', serif; font-weight: 700; }
+  .footer-body { font-family: 'Times New Roman', serif; font-weight: 700; white-space: pre-wrap; padding-top: 16px; }
+  .footer-table td.tax-col { text-align: right; }
+  .summary-table { width: 100%; border-collapse: collapse; margin-top: 50px; }
+  .summary-table th { font-size: 14px; font-weight: 700; border-bottom: 1px solid #000; padding: 5px; text-align: left; }
+  .summary-table td { font-size: 14px; font-weight: 700; padding: 8px 5px; }
+  .summary-table td.num, .summary-table th.num { text-align: right; padding-right: 15px; }
+  .summary-table .total-row td { border-top: 1px solid #000; }
+  .summary-table td.indent { padding-left: 25px; font-weight: 400; }
+</style>
+</head>
+<body>
+
+  <%# ── Page 1: cover + condensed SUMMARY ── %>
+  <div class="pdf-page page-one">
+    <%- include('invoicePdfHeader', { logoUrl, orgHeading, agencyName, invNo, invDateFormatted, billDateFromFormatted, billDateToFormatted }) %>
+
+    <%# Category totals only, not the itemized breakdown page 2 has - matches
+        InvoiceModel::getPdfFirstPage's real section order: Administrative Fees, Case Referral
+        Fee (repeated once per case-referral line item - $data['case_referral'] loop re-emits
+        the same aggregate $data['summary']['case_referral'] on every iteration, not just once;
+        kept as-is, that's genuinely what legacy renders), Adjudication Fees and Expenses (one
+        row per summary.timeExpense entry), then the unconditional Invoice Amount/Credit/Total
+        rows. %>
+    <table class="summary-table" cellpadding="0" cellspacing="0">
+      <thead>
+        <tr><th>SUMMARY</th><th class="num">TOTAL</th></tr>
+      </thead>
+      <tbody>
+        <% if (sections.summary.hasAdministrativeFee) { %>
+        <tr><td>Administrative Fees</td><td class="num">$<%= sections.summary.administrativeFeeFormatted %></td></tr>
+        <% } %>
+        <% for (let i = 0; i < sections.summary.caseReferralCount; i++) { %>
+        <tr><td>Case Referral Fee</td><td class="num">$<%= sections.summary.caseReferralFormatted %></td></tr>
+        <% } %>
+        <% if (sections.summary.timeExpense.length > 0) { %>
+        <tr><td>Adjudication Fees and Expenses</td><td class="num"></td></tr>
+        <% sections.summary.timeExpense.forEach(function(row) { %>
+        <tr><td class="indent"><%= row.label %></td><td class="num">$<%= row.totalFormatted %></td></tr>
+        <% }); %>
+        <% } %>
+        <tr class="total-row"><td>Invoice Amount</td><td class="num">$<%= subtotalFormatted %></td></tr>
+        <tr><td>Credit</td><td class="num">($<%= discountFormatted %>)</td></tr>
+        <tr><td>Total Amount Due</td><td class="num">$<%= totalFormatted %></td></tr>
+      </tbody>
+    </table>
+
+    <%- include('invoicePdfFooter', { remitInformation, taxInformation, headingSize: 18, bodySize: 16 }) %>
+  </div>
+
+  <%# ── Page 2: same header + itemized breakdown ── %>
+  <div class="pdf-page page-two">
+    <%- include('invoicePdfHeader', { logoUrl, orgHeading, agencyName, invNo, invDateFormatted, billDateFromFormatted, billDateToFormatted }) %>
+
+    <table class="items-table" cellpadding="0" cellspacing="0">
+      <thead>
+        <tr>
+          <th>TYPE</th>
+          <th>TASK/<br/>TYPE</th>
+          <th>PROFESSIONAL</th>
+          <th>RANK</th>
+          <th>QTY</th>
+          <th>RATE</th>
+          <th class="num">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (sections.allAgenciesAdministrativeFee.length > 0) { %>
+        <tr><td colspan="7" class="section-header">Administrative Fees</td></tr>
+        <% sections.allAgenciesAdministrativeFee.forEach(function(item) { %>
+        <tr>
+          <td></td>
+          <td>Administrative</td>
+          <td></td>
+          <td><%= item.userTypeLabel %></td>
+          <td><%= item.quantityFormatted %></td>
+          <td>$<%= item.rateFormatted %></td>
+          <td class="num">$<%= item.totalFormatted %></td>
+        </tr>
+        <% }); %>
+        <% } %>
+
+        <% if (sections.caseReferral.length > 0) { %>
+        <tr><td colspan="7" class="section-header">Case Referral Fee</td></tr>
+        <%# "Cases Received" is legacy's fixed task label for this section
+            (InvoiceModel::generateAttachment's $data['case_referral'] loop), not the item's
+            own itemName. %>
+        <% sections.caseReferral.forEach(function(item) { %>
+        <tr>
+          <td>&nbsp;</td>
+          <td>Cases Received</td>
+          <td>-</td>
+          <td>-</td>
+          <td><%= item.quantityFormatted %></td>
+          <td>$<%= item.rateFormatted %></td>
+          <td class="num">$<%= item.totalFormatted %></td>
+        </tr>
+        <% }); %>
+        <% } %>
+
+        <% if (sections.hasAdjudicationFees) { %>
+        <tr><td colspan="7" class="section-header">Adjudication Fees</td></tr>
+        <%# TASK/TYPE is always the fixed label "Legal" here, not the item's real task name -
+            matches generateAttachment's literal 'Legal' cell for time_alj/time_sa/time_saalj. %>
+        <% [].concat(sections.timeAlj, sections.timeSaalj, sections.timeSa).forEach(function(item) { %>
+        <tr>
+          <td>&nbsp;</td>
+          <td>Legal</td>
+          <td><%= item.professionalName %></td>
+          <td><%= item.userTypeLabel %></td>
+          <td><%= item.quantityFormatted %></td>
+          <td>$<%= item.rateFormatted %></td>
+          <td class="num">$<%= item.totalFormatted %></td>
+        </tr>
+        <% }); %>
+        <% } %>
+
+        <% if (sections.hasExpenses) { %>
+        <tr><td colspan="7" class="section-header">Expenses</td></tr>
+        <%# Grouped by (expense type, professional) - QTY/RATE are always blank for these rows,
+            see invoicePdfSections.js's groupExpenseItem for why that's a legacy quirk, not a
+            bug introduced here. Order matches generateAttachment's own: CMA, ALJ, SAALJ, SA,
+            Law Clerk. CMA rows are rendered separately, on purpose - legacy's own CMA loop
+            (unlike the other four) never references FirstName/LastName at all, showing the
+            role label in the PROFESSIONAL column and "-" in RANK instead of a real name. %>
+        <% sections.expenseCma.forEach(function(item) { %>
+        <tr>
+          <td>&nbsp;</td>
+          <td><%= item.taskName %></td>
+          <td><%= item.userTypeLabel %></td>
+          <td>-</td>
+          <td></td>
+          <td></td>
+          <td class="num">$<%= item.totalFormatted %></td>
+        </tr>
+        <% }); %>
+        <% [].concat(sections.expenseAlj, sections.expenseSaalj, sections.expenseSa, sections.expenseLawclerk).forEach(function(item) { %>
+        <tr>
+          <td>&nbsp;</td>
+          <td><%= item.taskName %></td>
+          <td><%= item.professionalName %></td>
+          <td><%= item.userTypeLabel %></td>
+          <td></td>
+          <td></td>
+          <td class="num">$<%= item.totalFormatted %></td>
+        </tr>
+        <% }); %>
+        <% } %>
+
+        <% if (discount > 0) { %>
+        <tr><td colspan="7" class="section-header">Credit</td></tr>
+        <tr>
+          <td>&nbsp;</td>
+          <td><%= discountDesc %></td>
+          <td>-</td>
+          <td>-</td>
+          <td></td>
+          <td></td>
+          <td class="num">($<%= discountFormatted %>)</td>
+        </tr>
+        <% } %>
+        <tr class="total-row">
+          <td colspan="6">Total Amount Due</td>
+          <td class="num">$<%= totalFormatted %></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <%- include('invoicePdfFooter', { remitInformation, taxInformation, headingSize: 15, bodySize: 14 }) %>
+  </div>
+
+</body>
+</html>

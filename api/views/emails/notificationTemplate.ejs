@@ -1,0 +1,131 @@
+<div style="padding: 10px">
+  <div>
+    <div>
+      <p
+        style="
+          font-family: Arial, sans-serif;
+          font-size: 21px;
+          font-weight: 600;
+          line-height: 31.5px;
+          text-align: left;
+          margin: 0;
+          color: rgba(0, 0, 0, 0.87);
+        "
+      >
+        Hi <%= firstName %>,
+      </p>
+    </div>
+    <div>
+      <p style="border-top: 1px solid #e0e0e0; margin: 24px 0"></p>
+    </div>
+    <div>
+      <% if (type === "DAILY_SUMMARY") { %>
+      <p
+        style="
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 21px;
+          text-align: left;
+          margin: 0;
+          padding-top: 0px;
+          color: rgba(0, 0, 0, 0.87);
+        "
+      >
+        Here's your daily summary
+      </p>
+      <% } else { %>
+      <p
+        style="
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 21px;
+          text-align: left;
+          margin: 0;
+          padding-top: 0px;
+          color: rgba(0, 0, 0, 0.87);
+        "
+      >
+        You have an unread Osah notification.
+      </p>
+      <% } %>
+    </div>
+    <div>
+      <ul>
+        <% for (const [key, values] of Object.entries(notificationObject)) { %>
+        <% if (values.length > 0) {%>
+        <h2
+          style="
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 21px;
+            text-align: left;
+            margin: 0;
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-decoration: underline;
+            color: rgba(0, 0, 0, 0.87);
+          "
+        >
+          <%= key %>:
+        </h2>
+        <ul>
+          <% values.forEach(value=> { %>
+          <a href="<%= url %>">
+            <li><%= value %></li>
+          </a>
+          <% }); %>
+        </ul>
+        <% } %> <% } %>
+      </ul>
+    </div>
+
+    <div style="display: flex">
+      <span
+        style="
+          font-family: Arial, sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 18px;
+          text-align: left;
+          color: #00000099;
+        "
+        >This message is sent from an address that is not monitored, so please
+        do not reply to this email. If you need help or have questions, please
+        reach out to your manager or IT department directly.</span
+      >
+    </div>
+  </div>
+  <div>
+    <p
+      style="
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 14px;
+        text-align: left;
+        color: #00000099;
+        margin: 0;
+      "
+    >
+      Powered by
+    </p>
+  </div>
+  <div>
+    <p
+      style="
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 14px;
+        text-align: left;
+        color: #00000099;
+        margin: 0;
+      "
+    >
+      Designed & Developed by Azul Arc
+    </p>
+  </div>
+</div>

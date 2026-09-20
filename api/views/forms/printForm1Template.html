@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DDS Print Form</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    body        { margin:0; padding:0; font-family:'Roboto',Arial,sans-serif; font-size:12px; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+
+    /* ── Cell containers ── */
+    .cell       { float:left; width:25%; margin:0 0 10px 0; }
+    .cell-50    { float:left; width:50%; margin:0 0 10px 0; }
+    .cell-drv   { display:table; width:50%; margin:0 0 10px 0; }
+    .cell-hdr   { width:25%; float:left; }
+    .cell-dock  { float:left; width:20%; margin:0 30px 3px 0; }
+    .cell-dock-last { float:left; width:20%; margin:0; }
+
+    /* ── Row / section wrappers ── */
+    .row        { display:table; width:100%; margin:0; }
+    .sec        { font-family:'Roboto',sans-serif; font-size:16px; font-weight:bold; padding:0 5px; display:table; width:100%; margin:10px 0 5px 0; }
+    .sec-lg     { margin-top:20px; }
+
+    /* ── Labels ── */
+    .lbl        { font-family:'Roboto',sans-serif; font-size:12px; font-weight:300; margin:0 0 3px 0; width:100%; }
+    .lbl-block  { font-family:'Roboto',sans-serif; font-size:12px; font-weight:300; margin:0 0 3px 0; display:table; width:100%; }
+    .lbl-static { font-family:'Roboto',sans-serif; font-size:12px; font-weight:normal; margin:0 0 10px 0; display:table; width:100%; }
+
+    /* ── Values ── */
+    .val        { font-family:'Roboto',sans-serif; font-size:12px; font-weight:bold; margin:0; width:100%; }
+    .val-h3     { font-family:'Roboto',sans-serif; font-size:12px; font-weight:bold; margin:0 0 10px 0; display:table; width:100%; padding:0; letter-spacing:normal; }
+    .val-inline { font-family:'Roboto',sans-serif; font-size:12px; font-weight:normal; margin:0 0 0 10px; }
+    .val-stacked{ font-family:'Roboto',sans-serif; font-size:12px; font-weight:bold; margin:0; display:block; }
+    .sub-lbl    { font-family:'Roboto',sans-serif; font-size:12px; font-weight:normal; margin:0; display:block; }
+
+    /* ── Misc ── */
+    .pad        { padding:0 5px; }
+    .is-new-row { font-family:'Roboto',sans-serif; font-size:12px; font-weight:bold; margin:10px 0; padding:0 5px; display:table; width:100%; }
+  </style>
+</head>
+<body>
+  <div style="margin:0 auto;width:100%;display:table;">
+
+    <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+    <div class="row">
+      <div class="cell-hdr"><div class="pad"><span class="lbl-block">Docket Number</span><h3 class="val-h3">{{DOCKET_NUMBER}}</h3></div></div>
+      <div class="cell-hdr"><div class="pad"><span class="lbl-block">Petitioner</span><h3 class="val-h3">{{PETITIONER_NAME}}</h3></div></div>
+      <div class="cell-hdr"><div class="pad"><span class="lbl-block">Respondent</span><h3 class="val-h3">{{RESPONDENT_NAME}}</h3></div></div>
+      <div class="cell-hdr"><div class="pad"><span class="lbl-block">Created By:</span><h3 class="val-h3">{{CREATED_BY}}</h3></div></div>
+    </div>
+    <hr/>
+
+    <!-- ══════════════════════════ DOCKET INFORMATION ══════════════════════════ -->
+    <div style="margin:0 0 20px 0;display:table;width:100%;">
+      <h3 class="sec">Docket Information</h3>
+      <div class="row">
+        <div class="cell-dock">     <div class="pad"><span class="lbl">Agency Code</span><h4 class="val">{{AGENCY_CODE}}</h4></div></div>
+        <div class="cell-dock">     <div class="pad"><span class="lbl">Case Type</span><h4 class="val">{{CASE_TYPE}}</h4></div></div>
+        <div class="cell-dock">     <div class="pad"><span class="lbl">County</span><h4 class="val">{{COUNTY}}</h4></div></div>
+        <div class="cell-dock-last"><div class="pad"><span class="lbl">Status</span><h4 class="val">{{STATUS}}</h4></div></div>
+      </div>
+    </div>
+    <hr/>
+
+    <!-- ════════════════════════ ADDITIONAL INFORMATION ════════════════════════ -->
+    <div>
+      <h3 class="sec">Additional Information</h3>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Date Requested</span><h4 class="val">{{DATE_REQUESTED}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Date Received</span><h4 class="val">{{DATE_RECEIVED}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Agency Reference Number</span><h4 class="val">{{AGENCY_REF_NUMBER}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Hearing Type</span><h4 class="val">{{HEARING_TYPE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Date Entered</span><h4 class="val">{{DATE_ENTERED}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Eligible for a Permit?</span><h4 class="val">{{ELIGIBLE_FOR_PERMIT}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Permit Effective Date</span><h4 class="val">{{PERMIT_EFFECTIVE_DATE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Permit Expiration Date</span><h4 class="val">{{PERMIT_EXPIRATION_DATE}}</h4></div></div>
+      </div>
+    </div>
+    <hr/>
+
+    <!-- ════════════════════════ INCIDENT INFORMATION ═════════════════════════ -->
+    <div>
+      <h3 class="sec">Incident Information</h3>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Citation #</span><h4 class="val">{{CITATION}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">County of Occurrance</span><h4 class="val">{{COUNTY_OF_OCCURRANCE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Incident Date</span><h4 class="val">{{INCIDENT_DATE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Incident time</span><h4 class="val">{{INCIDENT_TIME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Officer Badge Number</span><h4 class="val">{{OFFICER_BADGE_NUMBER}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Commercial Vehical?</span><h4 class="val">{{COMMERCIAL_VEHICLE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Hazardous Materials?</span><h4 class="val">{{HAZARDOUS_MATERIALS}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">State of Issue</span><h4 class="val">{{STATE_OF_ISSUE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Licence Class</span><h4 class="val">{{LICENCE_CLASS}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Date of Birth</span><h4 class="val">{{DATE_OF_BIRTH}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Restrictions</span><h4 class="val">{{RESTRICTIONS}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Gender</span><h4 class="val">{{GENDER}}</h4></div></div>
+        <!-- Height: two stacked sub-fields -->
+        <div class="cell">
+          <div class="pad">
+            <span class="lbl-static">Height</span>
+            <div style="width:50%;float:left;"><h4 class="val-stacked">{{HEIGHT_FEET}}</h4><span class="sub-lbl">Feet</span></div>
+            <div style="width:50%;float:left;"><h4 class="val-stacked">{{HEIGHT_INCHES}}</h4><span class="sub-lbl">Inches</span></div>
+          </div>
+        </div>
+        <div class="cell">   <div class="pad"><span class="lbl">Weight</span><h4 class="val">{{WEIGHT}}</h4></div></div>
+        <div class="cell-drv"><div class="pad"><span class="lbl-static">Driver was requested to submit to test and:</span><h4 class="val">{{DRIVER_TEST}}</h4></div></div>
+      </div>
+    </div>
+    <hr/>
+
+    <!-- ═══════════════════════ PETITIONER INFORMATION ════════════════════════ -->
+    <div>
+      <h3 class="sec sec-lg">Petitioner Information</h3>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Last Name</span><h4 class="val">{{PET_LAST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">First Name</span><h4 class="val">{{PET_FIRST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Middle Name</span><h4 class="val">{{PET_MIDDLE_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Licence Number</span><h4 class="val">{{PET_LICENCE_NUMBER}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 1</span><h4 class="val">{{PET_ADDRESS1}}</h4></div></div>
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 2</span><h4 class="val">{{PET_ADDRESS2}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">City</span><h4 class="val">{{PET_CITY}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">State</span><h4 class="val">{{PET_STATE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Zip Code</span><h4 class="val">{{PET_ZIP}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Phone</span><h4 class="val">{{PET_PHONE}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Email</span><h4 class="val">{{PET_EMAIL}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Fax</span><h4 class="val">{{PET_FAX}}</h4></div></div>
+      </div>
+    </div>
+    <hr/>
+
+    <!-- ══════════════════ PETITIONER ATTORNEY INFORMATION ═════════════════════ -->
+    <div>
+      <h3 class="sec sec-lg">Petitioner Attorney Information</h3>
+      <h4 class="is-new-row">Is this a new party or new address? <span class="val-inline">{{IS_NEW_ATTORNEY}}</span></h4>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Last Name</span><h4 class="val">{{ATT_LAST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">First Name</span><h4 class="val">{{ATT_FIRST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Middle Name</span><h4 class="val">{{ATT_MIDDLE_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">GA Bar #</span><h4 class="val">{{ATT_GA_BAR}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 1</span><h4 class="val">{{ATT_ADDRESS1}}</h4></div></div>
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 2</span><h4 class="val">{{ATT_ADDRESS2}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">City</span><h4 class="val">{{ATT_CITY}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">State</span><h4 class="val">{{ATT_STATE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Zip Code</span><h4 class="val">{{ATT_ZIP}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Phone</span><h4 class="val">{{ATT_PHONE}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Email</span><h4 class="val">{{ATT_EMAIL}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Fax</span><h4 class="val">{{ATT_FAX}}</h4></div></div>
+      </div>
+    </div>
+    <hr/>
+
+    <!-- ══════════════════════ OFFICER INFORMATION ════════════════════════════ -->
+    <div>
+      <h3 class="sec">Officer Information</h3>
+      <h4 class="is-new-row">Is this a new party or new address? <span class="val-inline">{{IS_NEW_OFFICER}}</span></h4>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Last Name</span><h4 class="val">{{OFF_LAST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">First Name</span><h4 class="val">{{OFF_FIRST_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Middle Name</span><h4 class="val">{{OFF_MIDDLE_NAME}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Title</span><h4 class="val">{{OFF_TITLE}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 1</span><h4 class="val">{{OFF_ADDRESS1}}</h4></div></div>
+        <div class="cell-50"><div class="pad"><span class="lbl">Address Line 2</span><h4 class="val">{{OFF_ADDRESS2}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">City</span><h4 class="val">{{OFF_CITY}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">State</span><h4 class="val">{{OFF_STATE}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Zip Code</span><h4 class="val">{{OFF_ZIP}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Phone</span><h4 class="val">{{OFF_PHONE}}</h4></div></div>
+      </div>
+      <div class="row">
+        <div class="cell"><div class="pad"><span class="lbl">Email</span><h4 class="val">{{OFF_EMAIL}}</h4></div></div>
+        <div class="cell"><div class="pad"><span class="lbl">Fax</span><h4 class="val">{{OFF_FAX}}</h4></div></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<table cellpadding="0" cellspacing="0" width="100%" class="letterhead-table">
+  <tr><td class="logo-cell"><img src="<%= logoUrl %>" alt="OSAH" width="120" /></td></tr>
+  <tr><td class="org-heading"><%= orgHeading %></td></tr>
+  <tr><td class="org-address-line">225 PEACHTREE STREET, NE, SUITE 400</td></tr>
+  <tr><td class="org-address-line">Atlanta, GA 30303</td></tr>
+</table>
+<table cellpadding="0" cellspacing="0" width="100%" class="meta-outer-table">
+  <tr>
+    <td class="agency-name"><%= agencyName %></td>
+    <td class="meta-details">
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr><td class="meta-label">Invoice no.</td><td class="meta-value"><%= invNo %></td></tr>
+        <tr><td class="meta-label">Invoice Date</td><td class="meta-value"><%= invDateFormatted %></td></tr>
+        <tr><td class="meta-label">Bill Date</td><td class="meta-value"><%= billDateFromFormatted %> - <%= billDateToFormatted %></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>

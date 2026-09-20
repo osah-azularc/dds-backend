@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xml:lang="en">
+   <head>
+      <title>OSAH</title>
+      <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>
+      <link rel='shortcut icon' href='favicon.ico' type='image/x-icon'>
+      <link rel='icon' href='favicon.ico' type='image/x-icon'>
+      <link href='https://fonts.googleapis.com/css?family=PT+Serif:400,700|Raleway:300,400,500,700|Roboto:300,400,500,700' rel='stylesheet'>
+   </head>
+   <body>
+      <div style='width: 820px; background: #f1f1f1; padding: 46px 60px 26px 60px; margin: 0 auto; border: 1px solid #d5d7db;'>
+         <div style='background: #fff; border: 1px solid #d5d7db;'>
+            <div style='padding: 10px 30px;'>
+               <a style='display: inline-block;'>
+               <img src='https://eportal.osah.ga.gov/external/images/osah-email-logo.jpg' alt='Logo' />
+               </a>
+            </div>
+            <div style='border-top: 1px solid #d5d7db; border-bottom: 1px solid #d5d7db; padding: 30px 30px;'>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0 0 20px 0;'> 
+                  {{body}}The reason for the rejection is below: 
+               </p>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0 0 20px 0;'> 
+                  {{rejectionReason}}
+               </p>
+            </div>
+            <div>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0; text-align: center; padding: 25px;'>Please contact {{cmaPhone}} or <a href='mailto:{{cmaEmail}}' target='_blank' style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 700; color: #737c8c;'>{{cmaEmail}}</a> for more information.</p>
+            </div>
+         </div>
+         <div>
+            <p style='font-family: Roboto, sans-serif; font-size: 12px; font-weight: 700; color: #737c8c; margin: 5px 0; text-align: center;'>PLEASE DO NOT REPLY TO THIS EMAIL:</p>
+            <p style='font-family: Roboto, sans-serif; font-size: 12px; font-weight: 300; color: #737c8c; margin: 0; text-align: center;'>You received this email because you have a case before the Office of State Administrative Hearings. <br/>If you have any questions related to your case, please check your notice of hearing for the appropriate contact.</p>
+         </div>
+      </div>
+   </body>
+</html>

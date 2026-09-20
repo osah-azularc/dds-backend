@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title><%= pdfTitle %></title>
+  <style>
+    body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; font-size: 12px; }
+    .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .print-table td {
+      padding: 5px;
+      border: 1px solid #000;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    .print-table .heading td { font-weight: bold; }
+    .cell-center { text-align: center; }
+    .cell-data { padding: 4px 5px; }
+  </style>
+</head>
+<body>
+
+  <%/* ── Header: judge name (left) + hearing meta (right) ── */%>
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td align="left" style="vertical-align:top;">
+        <table><tr><td style="line-height:12px;">
+          <span style="font-weight:bold;">Judge:</span>
+          <span style="font-weight:bold;"><%= judgeName %></span>
+        </td></tr></table>
+      </td>
+      <td align="right" style="vertical-align:top;">
+        <table style="margin-left:auto;">
+          <tr><td style="line-height:20px;white-space:nowrap;text-align:right;">
+            <strong>Hearing Location: <%= hearingSite %></strong>
+          </td></tr>
+          <tr><td style="line-height:20px;white-space:nowrap;text-align:right;">
+            <strong>County: <%= county %></strong>
+          </td></tr>
+          <tr><td style="line-height:20px;white-space:nowrap;text-align:right;">
+            <strong>Hearing Date: <%= hearingDate %></strong>
+          </td></tr>
+          <tr><td style="line-height:20px;white-space:nowrap;text-align:right;">
+            <strong>Hearing Time: <%= hearingTime %></strong>
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <br>
+
+  <%/* ── Docket table ── */%>
+  <table class="print-table" cellpadding="0" cellspacing="0" border="0">
+    <tr class="heading">
+      <td width="4%"  class="cell-center">S.No</td>
+      <td width="8%"  class="cell-center">Docket Number</td>
+      <td width="13%">Petitioner / Respondent</td>
+      <td width="12%">Petitioner Attorney</td>
+      <td width="6%"  class="cell-center">Case Desc</td>
+      <td width="12%">Case Official</td>
+      <td width="10%" class="cell-center">Agency Ref #</td>
+      <td width="11%">Assistant</td>
+      <td width="24%">Notes</td>
+    </tr>
+    <% rows.forEach(function(r, idx) { %>
+    <tr>
+      <td class="cell-center cell-data"><%= idx + 1 %></td>
+      <td class="cell-center cell-data"><%= r.caseId %></td>
+      <td class="cell-data"><%= r.name || '-' %></td>
+      <td class="cell-data"><%= r.attorneyName || '-' %></td>
+      <td class="cell-center cell-data"><%= r.caseType %></td>
+      <td class="cell-data"><%= r.caseOfficial || '-' %></td>
+      <td class="cell-center cell-data"><%= r.agencyRefNumber || '-' %></td>
+      <td class="cell-data"><%= r.judgeAssistant || '-' %></td>
+      <td class="cell-data"></td>
+    </tr>
+    <% }); %>
+  </table>
+
+</body>
+</html>
+

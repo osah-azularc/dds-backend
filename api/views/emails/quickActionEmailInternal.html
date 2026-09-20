@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <title>OSAH</title>
+      <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+      <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700' rel='stylesheet'>
+   </head>
+   <body>
+      <div style='width: 820px; background: #f1f1f1; padding: 46px 60px 26px 60px; margin: 0 auto; border: 1px solid #d5d7db;'>
+         <div style='background: #fff; border: 1px solid #d5d7db;'>
+            <div style='padding: 10px 30px;'>
+               <a style='display: inline-block;'>
+                  <img src='https://eportal.osah.ga.gov/external/images/osah-email-logo.jpg' alt='Logo' />
+               </a>
+            </div>
+            <div style='border-top: 1px solid #d5d7db; border-bottom: 1px solid #d5d7db; padding: 30px 30px;'>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0 0 20px 0;'>{{bodyMessage}}</p>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0 0 20px 0;'>Please login to ePortal or create an account to access your docket and view your files.</p>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0; text-align: center;'>
+                  <a style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; background: #d7a312; color: #fff; padding: 5px 10px; text-decoration: none; border-radius: 5px;' href='{{loginLink}}'>Login</a>
+               </p>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0; text-align: center;'><b>OR</b></p>
+               <p style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; color: #737c8c; margin: 0; text-align: center;'>
+                  <a style='font-family: Roboto, sans-serif; font-size: 16px; font-weight: 300; background: #d7a312; color: #fff; padding: 5px 10px; text-decoration: none; border-radius: 5px;' href='{{createAccountLink}}'>Create Account</a>
+               </p>
+            </div>
+{{emailClosing}}
