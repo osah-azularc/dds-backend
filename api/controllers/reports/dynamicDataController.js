@@ -1,4 +1,5 @@
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
+import { mysqlSequelize } from '../../../connections/seqDB.js';
 import StatusList from '../../models/StatusList.js';
 import Agency from '../../models/admin/agencyModel.js';
 import Casetypes from '../../models/Casetypes.js';
@@ -285,5 +286,37 @@ async function getDocketStatusList(_req, res) {
   }
 }
 
-export { getDataDynamic, getDocketStatusList };
+/*
+    Description : Get the DDS-specific docket status list (distinct from the
+                  generic OSAH statuslist table used by getDocketStatusList).
+                  PHP Method  : OsahformController::getdocketddslistAction()
+                  Request     : No parameters
+                  Response    : { success, message, data }
+*/
+async function getDdsDocketStatusList(_req, res) {
+  try {
+    const result = await mysqlSequelize.query(
+      `SELECT id, display_name, status AS statusList
+       FROM ddsstatuslist
+       WHERE status != 'rejected'
+       GROUP BY display_name`,
+      { type: QueryTypes.SELECT },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'DDS docket status list fetched successfully',
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error in getDdsDocketStatusList:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch DDS docket status list',
+      error: 'Failed to fetch DDS docket status list',
+    });
+  }
+}
+
+export { getDataDynamic, getDocketStatusList, getDdsDocketStatusList };
 
