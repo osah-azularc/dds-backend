@@ -1,6 +1,6 @@
-import { Op, QueryTypes } from 'sequelize';
-import { mysqlSequelize } from '../../../connections/seqDB.js';
+import { Op } from 'sequelize';
 import StatusList from '../../models/StatusList.js';
+import DdsStatusList from '../../models/DdsStatusList.js';
 import Agency from '../../models/admin/agencyModel.js';
 import Casetypes from '../../models/Casetypes.js';
 import JudgeAssistantClerk from '../../models/JudgeAssistantClerk.js';
@@ -295,13 +295,22 @@ async function getDocketStatusList(_req, res) {
 */
 async function getDdsDocketStatusList(_req, res) {
   try {
-    const result = await mysqlSequelize.query(
-      `SELECT id, display_name, status AS statusList
-       FROM ddsstatuslist
-       WHERE status != 'rejected'
-       GROUP BY display_name`,
-      { type: QueryTypes.SELECT },
-    );
+    // Multiple raw `status` rows can share one `display_name` (e.g. "Draft"
+    // covers both "pending" and "cloned"). Ordering by id and keeping only
+    // the first row per display_name reproduces one representative status
+    // per display_name, matching the dropdown's expected shape.
+    const rows = await DdsStatusList.findAll({
+      where: { status: { [Op.ne]: 'rejected' } },
+      order: [['id', 'ASC']],
+    });
+
+    const seenDisplayNames = new Set();
+    const result = [];
+    for (const row of rows) {
+      if (seenDisplayNames.has(row.displayName)) continue;
+      seenDisplayNames.add(row.displayName);
+      result.push({ id: row.id, display_name: row.displayName, statusList: row.status });
+    }
 
     return res.status(200).json({
       success: true,

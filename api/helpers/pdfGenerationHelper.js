@@ -2,7 +2,8 @@ import path from 'path';
 import AttorneyByCase from '../models/AttorneyByCase.js';
 import AgencyCaseworkerByCase from '../models/AgencyCaseworkerByCase.js';
 import MinorDetails from '../models/MinorDetails.js';
-import { mysqlSequelize } from '../../connections/seqDB.js';
+import Casetypes from '../models/Casetypes.js';
+import CaseTypeStyling from '../models/admin/caseTypeStylingModel.js';
 import { generateDocketHTML } from './pdfTemplateGenerator.js';
 import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
@@ -95,18 +96,17 @@ export async function generateDocketPDF(caseId, docket, peopleDetails, documents
     if (!petitionerName || !respondentName) {
       const caseCode = docket.caseType || docket.casetype || '';
       if (caseCode) {
-        const [casetypeRow] = await mysqlSequelize.query(
-          'SELECT Casetypeid, AgencyID FROM casetypes WHERE CaseCode = :caseCode LIMIT 1',
-          { replacements: { caseCode }, type: mysqlSequelize.QueryTypes.SELECT },
-        );
+        const casetypeRow = await Casetypes.findOne({
+          attributes: ['caseTypeId', 'agencyId'],
+          where: { caseCode },
+          raw: true,
+        });
         if (casetypeRow) {
-          const [stylingRow] = await mysqlSequelize.query(
-            'SELECT petitioner, respondent FROM casetypestyling WHERE AgencyId = :agencyId AND Casetypeid = :caseTypeId LIMIT 1',
-            {
-              replacements: { agencyId: casetypeRow.AgencyID, caseTypeId: casetypeRow.Casetypeid },
-              type: mysqlSequelize.QueryTypes.SELECT,
-            },
-          );
+          const stylingRow = await CaseTypeStyling.findOne({
+            attributes: ['petitioner', 'respondent'],
+            where: { agencyId: casetypeRow.agencyId, caseTypeId: casetypeRow.caseTypeId },
+            raw: true,
+          });
           if (stylingRow) {
             if (!petitionerName) petitionerName = stylingRow.petitioner || '';
             if (!respondentName) respondentName = stylingRow.respondent || '';

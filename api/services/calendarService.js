@@ -1,15 +1,22 @@
-import { QueryTypes } from "sequelize";
-import { mysqlSequelize } from "../../connections/seqDB.js";
 import CalendarHistory from "../models/admin/calendarHistoryModel.js";
 import V2_5_Calendar from "../models/admin/v2_5_calendarModel.js";
 import V2_5_CalendarCasetype from "../models/admin/v2_5_calendarCasetypeModel.js";
 import V2_5_Calendar_Hearing_Info from "../models/admin/v2_5_calendar_hearing_infoModel.js";
+import caseTypes from "../models/admin/caseTypesModel.js";
+import { REQUIRED_CIRCUIT_INCLUDE, REQUIRED_CASETYPE_GROUP_INCLUDE } from "./calendarIncludes.js";
 
 /**
  * Calendar Service
  * Business logic for admin calendar add/update/delete, extracted from
  * adminCalendarController.js so the controller stays a thin request/response layer.
+ *
+ * County-casetype conflict validation lives in calendarValidationService.js
+ * and the audit history list lives in calendarHistoryService.js (both
+ * re-exported below) — split out to keep this module a manageable size while
+ * the include/order descriptors they share live in calendarIncludes.js.
  */
+export { validateCountyCasetypeCombination } from "./calendarValidationService.js";
+export { getCalendarHistoryList } from "./calendarHistoryService.js";
 
 /**
  * Typed error a calendar service function can throw to signal a specific
@@ -32,42 +39,47 @@ export class CalendarServiceError extends Error {
  */
 export const getCalendarDetails = async (calendarId) => {
   try {
-    const results = await mysqlSequelize.query(
-      `SELECT
-        cal.id,
-        cal.circuit_id,
-        cal.casetype_group_id,
-        cr.name as circuit,
-        ctg.casetypegroup as casetypeGroup,
-        ct.agencycode,
-        ct.casecode
-      FROM v2_5_calendar cal
-      JOIN v2_5_circuit cr ON cal.circuit_id = cr.id
-      JOIN casetypegroups ctg ON cal.casetype_group_id = ctg.id
-      LEFT JOIN v2_5_calendar_casetype calct ON cal.id = calct.calendar_id
-      LEFT JOIN casetypes ct ON calct.casetype_id = ct.casetypeid
-      WHERE cal.id = :calendarId
-      ORDER BY ct.agencycode, ct.casecode`,
-      {
-        replacements: { calendarId: parseInt(calendarId) },
-        type: QueryTypes.SELECT,
-      }
-    );
+    const casetypeInclude = {
+      model: caseTypes,
+      as: "casetype",
+      attributes: ["Agencycode", "CaseCode"],
+      required: false,
+    };
+    const casetypeLinkInclude = {
+      model: V2_5_CalendarCasetype,
+      as: "calendarCasetypes",
+      // Sequelize needs at least the PK selected here to correctly hydrate
+      // this hasMany association into an array — attributes: [] silently
+      // leaves calendar.calendarCasetypes undefined instead.
+      attributes: ["id"],
+      required: false,
+      include: [casetypeInclude],
+    };
 
-    if (results.length === 0) {
+    const calendar = await V2_5_Calendar.findByPk(parseInt(calendarId), {
+      attributes: ["id", "circuitId", "caseTypeGroupId"],
+      include: [REQUIRED_CIRCUIT_INCLUDE, REQUIRED_CASETYPE_GROUP_INCLUDE, casetypeLinkInclude],
+      order: [
+        [casetypeLinkInclude, casetypeInclude, "Agencycode", "ASC"],
+        [casetypeLinkInclude, casetypeInclude, "CaseCode", "ASC"],
+      ],
+    });
+
+    if (!calendar) {
       return null;
     }
 
     // Format casetype data as "AGENCY-CASETYPE" comma-separated list
-    const casetypeList = results
-      .filter((row) => row.agencycode && row.casecode)
-      .map((row) => `${row.agencycode}-${row.casecode}`)
+    const casetypeList = (calendar.calendarCasetypes || [])
+      .map((link) => link.casetype)
+      .filter((ct) => ct && ct.Agencycode && ct.CaseCode)
+      .map((ct) => `${ct.Agencycode}-${ct.CaseCode}`)
       .join(", ");
 
     return {
       calendarDetails: {
-        circuit: results[0].circuit,
-        casetypeGroup: results[0].casetypeGroup,
+        circuit: calendar.circuit.name,
+        casetypeGroup: calendar.casetypeGroupInfo.casetypegroup,
       },
       casetype_data: casetypeList,
     };
@@ -214,174 +226,4 @@ export const deleteCalendarInfo = async (calendarId, modifiedBy) => {
     </p>`;
 
   await updateCalendarHistory(calHistoryInfo, calendarId, modifiedBy, 0);
-};
-
-/**
- * Validates if a county-casetype combination already exists in the calendar system.
- * Converted from PHP function isCountyCasetypeCombinationValid.
- * @param {Object} params
- * @param {number|string} params.circuit_id
- * @param {number[]} params.casetypeIds - Already parsed/validated casetype IDs
- * @param {number|string} [params.calendarId] - Excludes this calendar (when editing it)
- * @returns {Object} notificationList keyed by "circuit_id-casetype_group_id"
- */
-export const validateCountyCasetypeCombination = async ({ circuit_id, casetypeIds, calendarId }) => {
-  // Build the main query with joins - equivalent to the PHP function
-  let sqlQuery = `
-    SELECT
-      cal.circuit_id,
-      cal.casetype_group_id,
-      calct.casetype_id,
-      cr.name as circuit,
-      ctg.casetypegroup as casetypeGroup,
-      ct.casecode as casetype,
-      ct.agencycode as agency
-    FROM v2_5_calendar cal
-    JOIN v2_5_calendar_casetype calct ON cal.id = calct.calendar_id
-    JOIN v2_5_county_circuit_map cncr ON cal.circuit_id = cncr.circuit_id
-    JOIN v2_5_circuit cr ON cal.circuit_id = cr.id
-    JOIN casetypegroups ctg ON cal.casetype_group_id = ctg.id
-    JOIN casetypes ct ON calct.casetype_id = ct.casetypeid
-    WHERE cncr.county_id IN (
-      SELECT county_id
-      FROM v2_5_county_circuit_map
-      WHERE circuit_id = :circuit_id
-    )
-    AND calct.casetype_id IN (:casetypeIds)
-  `;
-
-  // Add calendar exclusion if updating existing calendar
-  if (calendarId) {
-    sqlQuery += ` AND cal.id != :calendarId`;
-  }
-
-  sqlQuery += `
-    GROUP BY cr.name, ctg.casetypegroup, ct.agencycode, ct.casecode
-    ORDER BY ct.agencycode, ct.casecode
-  `;
-
-  const results = await mysqlSequelize.query(sqlQuery, {
-    replacements: {
-      circuit_id: parseInt(circuit_id),
-      casetypeIds,
-      ...(calendarId && { calendarId: parseInt(calendarId) }),
-    },
-    type: QueryTypes.SELECT,
-  });
-
-  // Process results into notification list format
-  const notificationList = {};
-  results.forEach((data) => {
-    const key = `${data.circuit_id}-${data.casetype_group_id}`;
-
-    if (!notificationList[key]) {
-      notificationList[key] = {
-        circuit: data.circuit,
-        casetypeGroup: data.casetypeGroup,
-        data: [],
-      };
-    }
-
-    notificationList[key].data.push({
-      agency: data.agency,
-      casetype: data.casetype,
-    });
-  });
-
-  return notificationList;
-};
-
-// Allowlist of sortable columns — guards against SQL injection via an
-// unvalidated column name interpolated into ORDER BY.
-const CALENDAR_HISTORY_SORT_COLUMNS = {
-  created_time: "ch.created_time",
-  date: "ch.Date",
-  circuit: "cr.name",
-  casetypeGroup: "ctg.casetypegroup",
-  modifiedBy: "ch.Modifiedby",
-};
-
-/**
- * Lists calendar history records (paginated, filterable, sortable), each
- * joined with its calendar's circuit/casetype group.
- * Equivalent to PHP getcalendarhistoryAction.
- * @param {Object} params
- * @param {number} [params.page=1]
- * @param {number} [params.limit=10]
- * @param {number|string} [params.isFrontendHistory] - Filter by is_frontend_history flag
- * @param {number|string} [params.id] - Filter to a single calendar's history
- * @param {string} [params.sortBy='created_time']
- * @param {string} [params.sortOrder='DESC']
- * @returns {{ data: Array, totalCount: number }}
- */
-export const getCalendarHistoryList = async ({
-  page = 1,
-  limit = 10,
-  isFrontendHistory,
-  id,
-  sortBy = "created_time",
-  sortOrder = "DESC",
-}) => {
-  const offset = (page - 1) * limit;
-  const sortColumn = CALENDAR_HISTORY_SORT_COLUMNS[sortBy] || CALENDAR_HISTORY_SORT_COLUMNS.created_time;
-  const sortDirection = String(sortOrder).toUpperCase() === "ASC" ? "ASC" : "DESC";
-
-  const whereConditions = [];
-  const replacements = { limit, offset };
-
-  if (isFrontendHistory !== undefined) {
-    whereConditions.push("ch.is_frontend_history = :isFrontendHistory");
-    replacements.isFrontendHistory = parseInt(isFrontendHistory);
-  }
-
-  if (id) {
-    whereConditions.push("ch.Calendarid = :id");
-    replacements.id = parseInt(id);
-  }
-
-  const whereClause = whereConditions.length ? `WHERE ${whereConditions.join(" AND ")}` : "";
-
-  // Get total count for pagination
-  const countResult = await mysqlSequelize.query(
-    `SELECT COUNT(*) as total FROM calendarhistory ch ${whereClause}`,
-    {
-      replacements,
-      type: QueryTypes.SELECT,
-    }
-  );
-  const totalCount = countResult[0].total;
-
-  // Enhanced SQL query to include circuit and casetype group information with pagination
-  const sql = `
-    SELECT
-      ch.auditid,
-      ch.Date,
-      ch.Calendarid,
-      ch.Description,
-      ch.Modifiedby,
-      DATE_FORMAT(ch.created_time, '%h:%i %p') as created_time,
-      DATE_FORMAT(ch.created_time, '%Y-%m-%d %H:%i:%s') as createdDate,
-      cr.name as circuit,
-      ctg.casetypegroup as casetypeGroup
-    FROM calendarhistory ch
-    LEFT JOIN v2_5_calendar cal ON ch.Calendarid = cal.id
-    LEFT JOIN v2_5_circuit cr ON cal.circuit_id = cr.id
-    LEFT JOIN casetypegroups ctg ON cal.casetype_group_id = ctg.id
-    ${whereClause}
-    ORDER BY ${sortColumn} ${sortDirection}
-    LIMIT :limit OFFSET :offset
-  `;
-
-  const result = await mysqlSequelize.query(sql, {
-    replacements,
-    type: QueryTypes.SELECT,
-  });
-
-  // Clean up the description field to remove HTML and format properly
-  const data = result.map((record) => ({
-    ...record,
-    Description: record.Description || "",
-  }));
-
-  return { data, totalCount };
 };

@@ -5,6 +5,9 @@ import { mysqlSequelize } from "../../connections/seqDB.js";
 import sendsgMail from "../utilities/sendsgMail.js";
 import BulkEmailTemplate from "../models/BulkEmailTemplate.js";
 import BulkEmailMapping from "../models/BulkEmailMapping.js";
+import AgencyCaseworkerByCase from "../models/AgencyCaseworkerByCase.js";
+import PeopleDetails from "../models/PeopleDetails.js";
+import AttorneyByCase from "../models/AttorneyByCase.js";
 import { deleteFile } from "../../helpers/s3.js";
 import { logger } from "../../config/winstonLogger.js";
 import { getEfsBasePath } from "../utilities/efsPath.js";
@@ -124,7 +127,12 @@ export const isValidEmail = (email) =>
 
 /**
  * Get unique email recipients for selected dockets from parties_master/case_parties.
- * Raw SQL is required here: those tables have no Sequelize models in this project.
+ * Raw SQL is required here: those tables have no Sequelize models in this project,
+ * and — unlike every other table this service touches — they don't exist at all in
+ * the current `osah` schema (verified via `DESCRIBE`/`SHOW TABLES LIKE '%part%'`
+ * against the local dev DB), so there is no live schema to model or verify against.
+ * Leaving this raw rather than guessing at column definitions for a model that
+ * can't be checked.
  */
 export const fetchPartyRecipients = (caseIds) => {
   const query = `
@@ -143,36 +151,59 @@ export const fetchPartyRecipients = (caseIds) => {
 
 /**
  * Fetch email recipients for given dockets from 3 party tables.
- * Mirrors PHP getBulkEmailDatabySql() exactly — raw SQL, caseid IN, Email != '' AND Email != 'No Email'.
+ * Mirrors PHP getBulkEmailDatabySql() exactly — caseid IN, Email != '' AND Email != 'No Email'.
+ * Converted from raw SQL to the existing AgencyCaseworkerByCase/PeopleDetails/AttorneyByCase
+ * models. `Op.notIn: ['', 'No Email']` reproduces the original's two `!=` conditions
+ * (including its NULL-email exclusion, since `NULL NOT IN (...)` is NULL/falsy in MySQL,
+ * same as `NULL != ''`). CONCAT(Firstname, ' ', Lastname) returns NULL in MySQL if either
+ * part is NULL, so `buildUserName` mirrors that instead of coercing to empty string.
  */
+const buildUserName = (firstName, lastName) =>
+  firstName == null || lastName == null ? null : `${firstName} ${lastName}`;
+
 export const fetchBulkEmailRecipients = async (docketIds) => {
   if (!docketIds.length) return [];
 
-  const run = (sql) =>
-    mysqlSequelize.query(sql, {
-      replacements: { ids: docketIds },
-      type: Sequelize.QueryTypes.SELECT,
-    });
+  const emailFilter = { caseId: { [Op.in]: docketIds }, email: { [Op.notIn]: ["", "No Email"] } };
 
   const [agency, people, attorneys] = await Promise.all([
-    run(`SELECT CONCAT(Firstname, ' ', Lastname) AS userName, Email AS email, caseid, sno AS party_id, 'agencycaseworkerbycase' AS tableName
-         FROM agencycaseworkerbycase
-         WHERE caseid IN (:ids) AND Email != '' AND Email != 'No Email'`),
-    run(`SELECT CONCAT(Firstname, ' ', Lastname) AS userName, Email AS email, caseid, peopleid AS party_id, 'peopledetails' AS tableName
-         FROM peopledetails
-         WHERE caseid IN (:ids) AND Email != '' AND Email != 'No Email'`),
-    run(`SELECT CONCAT(Firstname, ' ', Lastname) AS userName, Email AS email, caseid, sno AS party_id, 'attorneybycase' AS tableName
-         FROM attorneybycase
-         WHERE caseid IN (:ids) AND Email != '' AND Email != 'No Email'`),
+    AgencyCaseworkerByCase.findAll({
+      where: emailFilter,
+      attributes: ["firstName", "lastName", "email", "caseId", "sno"],
+    }),
+    PeopleDetails.findAll({
+      where: emailFilter,
+      attributes: ["firstName", "lastName", "email", "caseId", "peopleId"],
+    }),
+    AttorneyByCase.findAll({
+      where: emailFilter,
+      attributes: ["firstName", "lastName", "email", "caseId", "sno"],
+    }),
   ]);
 
-  return [...agency, ...people, ...attorneys].map((r) => ({
-    Email: r.email,
-    userName: r.userName,
-    caseid: r.caseid,
-    tableName: r.tableName,
-    party_id: r.party_id,
-  }));
+  return [
+    ...agency.map((r) => ({
+      Email: r.email,
+      userName: buildUserName(r.firstName, r.lastName),
+      caseid: r.caseId,
+      tableName: "agencycaseworkerbycase",
+      party_id: r.sno,
+    })),
+    ...people.map((r) => ({
+      Email: r.email,
+      userName: buildUserName(r.firstName, r.lastName),
+      caseid: r.caseId,
+      tableName: "peopledetails",
+      party_id: r.peopleId,
+    })),
+    ...attorneys.map((r) => ({
+      Email: r.email,
+      userName: buildUserName(r.firstName, r.lastName),
+      caseid: r.caseId,
+      tableName: "attorneybycase",
+      party_id: r.sno,
+    })),
+  ];
 };
 
 /** Send one email via SendGrid with HTML body and optional buffer attachment. */

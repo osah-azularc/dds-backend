@@ -7,15 +7,24 @@
  * For every DFCS row, legacy resolves a hearing slot from a pre-populated scheduling
  * calendar (keyed on casetype + county), with a capacity check against already-docketed
  * cases on that exact date/time/site. This is a lookup + capacity check, not a
- * rotation/scheduling algorithm — it's ported here as near-verbatim raw SQL (matching the
- * existing raw-query pattern for calendar data in adminCalendarController.js) rather than
- * reconstructed via Sequelize `include`/`having`, since there's no simpler ORM analogue for
- * a 9-way join with a HAVING-based capacity check and a dynamic sort direction.
+ * rotation/scheduling algorithm.
+ *
+ * The two simple single-table lookups below (cutoff-days-difference, skip-casetype) use
+ * the existing Cuttoffdate/HearingDateSkip Sequelize models. `findHearingSlot`'s slot query
+ * stays raw SQL (matching the existing raw-query pattern for calendar data in
+ * adminCalendarController.js): it's an 11-way join (calendar/casetype/county-circuit/
+ * hearing-info/hearingtime/casetypegroups/casetypes/courtlocations/circuit/judge/cma, plus
+ * a LEFT JOIN to docket) with a HAVING-based capacity check against a COUNT() aggregate and
+ * a dynamic ASC/DESC sort direction — there's no clean Sequelize `include`/`group`/`having`
+ * equivalent for that shape without either fetching far more rows than needed and filtering
+ * in JS, or losing the single round-trip LIMIT 1 semantics.
  */
 import moment from 'moment';
 import { QueryTypes } from 'sequelize';
 import { mysqlSequelize } from '../../../connections/seqDB.js';
 import JudgeAssistantClerk from '../../models/JudgeAssistantClerk.js';
+import Cuttoffdate from '../../models/cuttoffdateModel.js';
+import HearingDateSkip from '../../models/admin/hearingDateSkipModel.js';
 
 const emptyAssignment = () => ({
   hearingSite: '',
@@ -29,22 +38,19 @@ const emptyAssignment = () => ({
 
 // Legacy: cuttoffdate.cutoff_days_diffrence for the casetype (CalendarModel.php:1149-1161).
 const getCutoffDaysDifference = async (caseTypeId) => {
-  const rows = await mysqlSequelize.query(
-    'SELECT cutoff_days_diffrence FROM cuttoffdate WHERE casetypeid = :caseTypeId',
-    { replacements: { caseTypeId }, type: QueryTypes.SELECT },
-  );
-  return rows[0]?.cutoff_days_diffrence ?? null;
+  const row = await Cuttoffdate.findOne({
+    where: { casetypeId: caseTypeId },
+    attributes: ['cutoffDaysDifference'],
+  });
+  return row?.cutoffDaysDifference ?? null;
 };
 
 // Legacy: hearingdateskip lookup for the casetype (CalendarModel.php:1163-1175 and, separately,
 // re-checked at OsahformController.php:9608-9610). Both call sites check the same condition —
 // we query it once here and reuse the boolean for both the query-shaping and the blanking step.
 const isSkipCasetype = async (caseTypeId) => {
-  const rows = await mysqlSequelize.query(
-    'SELECT casetypeid FROM hearingdateskip WHERE casetypeid = :caseTypeId',
-    { replacements: { caseTypeId }, type: QueryTypes.SELECT },
-  );
-  return rows.length > 0;
+  const count = await HearingDateSkip.count({ where: { caseTypeId } });
+  return count > 0;
 };
 
 /**
