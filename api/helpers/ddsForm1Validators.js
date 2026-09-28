@@ -87,3 +87,117 @@ export function validateAddDdsDocket(data) {
 
   return value;
 }
+
+/*
+  Validates the "Form 1" review screen's initial load call — the request
+  that resolves the form1_id from the URL's base64 `reqdt` param into the
+  docket + party data. Ports DdsForm1Controller::searchdocketinfoAction()'s
+  request shape: `{ tableName: "docketsearch", condition: <form1_id> }`.
+  `tableName` is accepted (matching the legacy request body) but unused,
+  same as the legacy action itself.
+*/
+const searchDocketInfoSchema = Joi.object({
+  tableName: Joi.string().optional(),
+  condition: Joi.alternatives()
+    .try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/))
+    .required()
+    .messages({
+      'any.required': 'condition (form1_id) is required',
+      'alternatives.match': 'condition must be a positive integer form1_id',
+    }),
+}).unknown(false);
+
+export function validateSearchDocketInfo(data) {
+  const { error, value } = searchDocketInfoSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) {
+    throw new ValidationError(error.details.map((e) => e.message).join(', '), 'searchDocketInfo');
+  }
+
+  return { form1Id: Number.parseInt(value.condition, 10) };
+}
+
+/*
+  Validates the Temporary Permit save on the existing-docket review screen
+  (/form1/reqdt/:form1Id). Ports DdsForm1Controller::updatedocketAction()'s
+  request shape — note `incidentDate` here (not `incident_date`, as
+  addDocket uses); that mismatch exists in the legacy API itself. Only
+  covers the Temporary Permit fields the UI actually lets an agency edit on
+  an existing docket (see TemporaryPermitSection.jsx) — legacy's action also
+  handles a "cloned"/resubmitted-docket workflow and a pre-printed-permit
+  invalidation flag on form1_docket.temp_permits, neither of which is
+  wired up here.
+*/
+const updateDocketDetailsSchema = Joi.object({
+  agencyrefnumber: agencyReferenceNoSchema.required().messages({
+    'any.required': 'Agency Reference Number is required',
+  }),
+  eligiblepermit: Joi.string().valid('0', '1').required(),
+  permiteffectivedate: optionalDateString,
+  expiryDate: optionalDateString,
+  DOB: optionalPastOrTodayDateString,
+  incidentDate: optionalDateString,
+}).unknown(false);
+
+const updateDocketSchema = Joi.object({
+  form1Id: Joi.alternatives()
+    .try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/))
+    .required()
+    .messages({ 'any.required': 'form1Id is required' }),
+  docketdetails: updateDocketDetailsSchema.required().messages({
+    'any.required': 'docketdetails is required',
+  }),
+}).unknown(false);
+
+export function validateUpdateDdsDocket(data) {
+  const { error, value } = updateDocketSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) {
+    throw new ValidationError(error.details.map((e) => e.message).join(', '), 'updateDdsDocket');
+  }
+
+  const { docketdetails } = value;
+  if (docketdetails.eligiblepermit === '1') {
+    const missing = ['permiteffectivedate', 'DOB', 'incidentDate'].filter(
+      (field) => !docketdetails[field],
+    );
+    if (missing.length > 0) {
+      throw new ValidationError(
+        'Permit Effective Date, Date of Birth, and Incident Date are required when eligible for a permit',
+        'updateDdsDocket',
+      );
+    }
+  }
+
+  return { form1Id: Number.parseInt(value.form1Id, 10), docketdetails };
+}
+
+/*
+  Validates the "Delete Form1" button on the existing-docket review screen (only
+  shown/enabled for a still-Draft docket, actualStatus === 'pending' -- see
+  DocketTabBar.jsx). Ports DdsForm1Controller::deletedocketAction()'s request shape
+  (legacy's own key is `docket_number`; this uses `form1Id` for consistency with this
+  screen's other newer endpoints).
+*/
+const deleteDocketSchema = Joi.object({
+  form1Id: Joi.alternatives()
+    .try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/))
+    .required()
+    .messages({ 'any.required': 'form1Id is required' }),
+}).unknown(false);
+
+export function validateDeleteDocket(data) {
+  const { error, value } = deleteDocketSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) {
+    throw new ValidationError(error.details.map((e) => e.message).join(', '), 'deleteDocket');
+  }
+
+  return { form1Id: Number.parseInt(value.form1Id, 10) };
+}
