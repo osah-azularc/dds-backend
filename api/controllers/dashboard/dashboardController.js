@@ -1,17 +1,14 @@
 import { Op } from "sequelize";
 import Docket from "../../models/Docket.js";
-import { handleComplexSearch } from "../../helpers/dashboardHelper.js";
 import DocketDisposition from "../../models/DocketDisposition.js";
 import {
   validateGeneralSearch,
   validateClosedCasesSearch,
   validateDocketInfoSearch,
 } from "../../helpers/dashboardValidators.js";
-import {
-  buildGeneralSearchConditions,
-  buildClosedCasesSearchConditions,
-  applyDocumentFilters,
-} from "../../helpers/dashboardQueryBuilder.js";
+import { buildClosedCasesSearchConditions } from "../../helpers/dashboardQueryBuilder.js";
+import { buildDdsGeneralSearchConditions } from "../../helpers/ddsSearchQueryBuilder.js";
+import { runDdsGeneralSearch, handleDdsComplexSearch } from "../../helpers/ddsSearchHelper.js";
 import {
   extractCaseIdFromLookup,
   getSearchDocketInfoData,
@@ -50,67 +47,26 @@ const handleSearchError = (error, res) => {
 
 /**
  * General Search
- * Searches dockets with various filters using Sequelize models
+ * Searches DDS Form 1 dockets (form1_docket, the same table the "Form 1"
+ * review screen's searchdocketinfo API reads by form1_id — see
+ * ddsSearchQueryBuilder.js/ddsSearchHelper.js) with various filters.
  */
 export const generalSearch = async (req, res) => {
   try {
     const validatedData = validateGeneralSearch(req.body);
     const { condition = {}, additionalCondition = {} } = validatedData;
 
-    // Build where conditions using helper
-    const whereConditions = buildGeneralSearchConditions(condition);
+    const whereConditions = buildDdsGeneralSearchConditions(condition);
 
-    // Apply special document filters (withDecisionDocument, withoutNOH, excludeNOH)
-    const earlyResponse = await applyDocumentFilters(whereConditions, condition);
-    if (earlyResponse) {
-      return res.status(200).json(earlyResponse);
-    }
-
-    // Handle name search with contact type (requires complex joins)
     const fname = condition.firstName || '';
     const lname = condition.lastName || '';
     const contactType = condition.typeOfContact || '';
 
     if (contactType || fname || lname) {
-      return await handleComplexSearch(condition, additionalCondition, whereConditions, fname, lname, contactType, res);
+      return await handleDdsComplexSearch(additionalCondition, whereConditions, fname, lname, contactType, res);
     }
 
-    const orderField = additionalCondition.orderby || 'dateReceivedByOSAH';
-    const orderDirection = additionalCondition.order === 1 ? 'DESC' : 'ASC';
-
-    const queryOptions = {
-      where: whereConditions.length ? { [Op.and]: whereConditions } : undefined,
-      attributes: [
-        'caseId',
-        'caseName',
-        'refAgency',
-        'caseType',
-        'dateReceivedByOSAH',
-        'dateRequested',
-        'hearingDate',
-        'hearingTime',
-        'county',
-        'hearingSite',
-        'judge',
-        'status',
-        'agencyRefNumber',
-      ],
-      order: [[orderField, orderDirection]],
-      limit: additionalCondition.length || DEFAULT_PAGE_SIZE,
-      offset: additionalCondition.start || DEFAULT_OFFSET,
-      distinct: true,
-      col: 'caseId',
-    };
-
-    const { count, rows } = await Docket.findAndCountAll(queryOptions);
-
-    return res.status(200).json({
-      success: true,
-      message: count > 0 ? 'Data fetched successfully' : 'No results found',
-      data: rows,
-      total: count,
-      error: null,
-    });
+    return await runDdsGeneralSearch(whereConditions, additionalCondition, res);
   } catch (error) {
     logger.error('❌ Error in generalSearch:', error);
     return handleSearchError(error, res);

@@ -78,6 +78,13 @@ export const buildStatusCondition = (status) => {
     return { status: { [Op.in]: ['Rescheduled', 'Hearing Re-scheduled', 'Hearing Re-Scheduled'] } };
   }
 
+  // DDS "In Review" status (ddsstatuslist.display_name) covers both the
+  // 'resubmitted' and 'submitted' raw status values — same special case the
+  // legacy DDS search (searchResultddsAction) applied.
+  if (status.toLowerCase() === 'resubmitted') {
+    return { status: { [Op.in]: ['resubmitted', 'submitted'] } };
+  }
+
   return { status };
 };
 

@@ -1,4 +1,3 @@
-import { mysqlSequelize } from "../../../connections/seqDB.js";
 import { Op } from "sequelize";
 import { logger } from "../../../config/winstonLogger.js";
 import DocumentTemplates from "../../models/admin/documentTemplatesModel.js";
@@ -10,7 +9,7 @@ import {
   normalizeDateFormat,
   buildCasetypeConflictWhere,
 } from "./helpers/templateMappingTransformer.js";
-import { buildFilterWhereClause } from "./helpers/templateReadHelpers.js";
+import { buildFilterWhereClause, CASE_TYPE_DISPLAY_LITERAL } from "./helpers/templateReadHelpers.js";
 
 /**
  * Get single V2 document template by ID for Edit page.
@@ -110,63 +109,28 @@ export const getAllTemplatesV2 = async (req, res) => {
       pageSize = 25,
     } = req.body;
 
-    const { whereSQL, replacements } = buildFilterWhereClause({
+    const { where, replacements } = buildFilterWhereClause({
       agencies, caseTypes, scopeType, documentName, status, automationTypes,
     });
 
-    /*
-     * Raw SQL is intentionally used for the COUNT + paginated list queries below.
-     * Justification: the SELECT column list contains a nested correlated subquery with
-     * two levels of GROUP_CONCAT (agency-grouped casetype display string). This cannot
-     * be expressed with Sequelize model attributes without embedding a multi-line
-     * Sequelize.literal() string — which would be harder to read and maintain than the
-     * parameterised raw query already here. All user-supplied values are bound via named
-     * replacements (:param), so SQL-injection risk is fully mitigated.
-     */
-    const [countRows] = await mysqlSequelize.query(
-      `SELECT COUNT(*) as total FROM document_templates dt ${whereSQL}`,
-      { replacements, raw: true }
-    );
-    const total = Number(countRows[0]?.total ?? 0);
+    const total = await DocumentTemplates.count({ where, replacements });
 
-    replacements.pageSize = pageSize;
-    replacements.offset = page * pageSize;
-
-    const [templates] = await mysqlSequelize.query(
-      `SELECT
-        dt.id,
-        dt.displayname as displayName,
-        dt.documentname as fileName,
-        COALESCE(
-          (
-            SELECT GROUP_CONCAT(
-              CONCAT(agency_group, ': ', casetypes)
-              ORDER BY agency_group
-              SEPARATOR ' | '
-            )
-            FROM (
-              SELECT
-                m.agency as agency_group,
-                GROUP_CONCAT(
-                  CASE WHEN m.casetype = 'all' THEN 'All' ELSE m.casetype END
-                  ORDER BY m.casetype
-                  SEPARATOR ', '
-                ) as casetypes
-              FROM document_template_casetype_mapping m
-              WHERE m.template_id = dt.id
-              GROUP BY m.agency
-            ) agency_cases
-          ),
-          'N/A'
-        ) as caseType,
-        dt.documenttype as documentType,
-        dt.active as status
-      FROM document_templates dt
-      ${whereSQL}
-      ORDER BY dt.id DESC
-      LIMIT :pageSize OFFSET :offset`,
-      { replacements, raw: true }
-    );
+    const templates = await DocumentTemplates.findAll({
+      attributes: [
+        'id',
+        ['displayname', 'displayName'],
+        ['documentname', 'fileName'],
+        [CASE_TYPE_DISPLAY_LITERAL, 'caseType'],
+        ['documenttype', 'documentType'],
+        ['active', 'status'],
+      ],
+      where,
+      replacements,
+      order: [['id', 'DESC']],
+      limit: pageSize,
+      offset: page * pageSize,
+      raw: true,
+    });
 
     return res.status(200).json({
       status: 200,
