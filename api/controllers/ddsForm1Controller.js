@@ -1,6 +1,7 @@
 import {
   validateAddDdsDocket,
   validateSearchDocketInfo,
+  validateGetForm1Id,
   validateUpdateDdsDocket,
   validateDeleteDocket,
 } from '../helpers/ddsForm1Validators.js';
@@ -63,6 +64,43 @@ export const searchDocketInfoHandler = async (req, res) => {
     // the Angular frontend checks for as a literal string response body.
     logger.error('Error in searchDocketInfoHandler (dds-form1):', error);
     return res.status(200).send('404');
+  }
+};
+
+/**
+ * Resolves the form1_id for a given eCourt docket/case id, for the Home
+ * page header's "Docket Number" quick search (DocketSearch.jsx) to navigate
+ * to /form1/reqdt/:form1Id.
+ * @route POST /dds-form1/getForm1Id
+ */
+export const getForm1IdHandler = async (req, res) => {
+  try {
+    const { docketId } = validateGetForm1Id(req.body);
+    const form1Id = await ddsForm1Service.getForm1IdByEcourtCaseId(docketId);
+
+    return res.status(200).json({
+      success: true,
+      message: form1Id ? 'Form 1 found' : 'No records found',
+      data: form1Id ? { form1Id } : null,
+      error: null,
+    });
+  } catch (error) {
+    if (error.isValidationError) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        data: null,
+        error: error.message,
+      });
+    }
+
+    logger.error('Error in getForm1IdHandler (dds-form1):', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      data: null,
+      error: 'Internal server error',
+    });
   }
 };
 

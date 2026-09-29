@@ -2,6 +2,7 @@ import express from "express";
 import {
   addDocketHandler,
   searchDocketInfoHandler,
+  getForm1IdHandler,
   updateDocketHandler,
   deleteDocketHandler,
 } from "../controllers/ddsForm1Controller.js";
@@ -40,6 +41,7 @@ router.use(getLoggedInUserId);
 
 router.post("/adddocket", addDocketHandler);
 router.post("/searchdocketinfo", searchDocketInfoHandler);
+router.post("/getForm1Id", getForm1IdHandler);
 router.post("/updatedocket", updateDocketHandler);
 router.post("/deletedocket", deleteDocketHandler);
 

@@ -148,6 +148,23 @@ export const searchDocketInfo = async (form1Id) => {
 };
 
 /**
+ * Resolves the DDS Form 1 whose ecourt_caseid matches the given docket id.
+ * Ports DdsForm1Controller::getForm1IdAction() for the Home page header's
+ * "Docket Number" quick search (DocketSearch.jsx) -- that box searches by
+ * the eCourt case id, so it needs this lookup before it can navigate to
+ * /form1/reqdt/:form1Id. Returns null when no Form 1 has that ecourt_caseid
+ * (matches legacy's `isset($form1_data[0]) ? $form1_data[0] : array()`).
+ */
+export const getForm1IdByEcourtCaseId = async (docketId) => {
+  const docket = await Form1Docket.findOne({
+    where: { ecourtCaseid: docketId },
+    attributes: ['form1Id'],
+  });
+
+  return docket?.form1Id ?? null;
+};
+
+/**
  * Saves the Temporary Permit edits made on the existing-docket review
  * screen (/form1/reqdt/:form1Id). Ports the Temporary Permit portion of
  * DdsForm1Controller::updatedocketAction() — upserts (update-if-exists,
@@ -254,4 +271,10 @@ export const deleteDocket = async (form1Id) => {
   await Form1Docket.destroy({ where: { form1Id } });
 };
 
-export default { addDocket, searchDocketInfo, updateDocket, deleteDocket };
+export default {
+  addDocket,
+  searchDocketInfo,
+  getForm1IdByEcourtCaseId,
+  updateDocket,
+  deleteDocket,
+};

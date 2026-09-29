@@ -177,6 +177,35 @@ export function validateUpdateDdsDocket(data) {
 }
 
 /*
+  Validates the Home page's header "Docket Number" quick search
+  (DocketSearch.jsx) for DDS. Ports DdsForm1Controller::getForm1IdAction()'s
+  request shape: `{ docketId: <ecourt_caseid> }` -> looks up the DDS Form 1
+  whose ecourt_caseid matches, since the box searches by the eCourt case id,
+  not the internal form1_id.
+*/
+const getForm1IdSchema = Joi.object({
+  docketId: Joi.alternatives()
+    .try(Joi.number().integer().positive(), Joi.string().pattern(/^\d+$/))
+    .required()
+    .messages({
+      'any.required': 'docketId is required',
+      'alternatives.match': 'docketId must be a positive integer',
+    }),
+}).unknown(false);
+
+export function validateGetForm1Id(data) {
+  const { error, value } = getForm1IdSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) {
+    throw new ValidationError(error.details.map((e) => e.message).join(', '), 'getForm1Id');
+  }
+
+  return { docketId: Number.parseInt(value.docketId, 10) };
+}
+
+/*
   Validates the "Delete Form1" button on the existing-docket review screen (only
   shown/enabled for a still-Draft docket, actualStatus === 'pending' -- see
   DocketTabBar.jsx). Ports DdsForm1Controller::deletedocketAction()'s request shape
