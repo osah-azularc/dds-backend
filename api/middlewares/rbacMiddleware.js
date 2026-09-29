@@ -38,7 +38,7 @@ const resolveUserId = (req) => req.userId ?? req.user?.userId ?? req.user?.user_
 
 /**
  * @param {string} permissionName - the permission's dotted `name` column,
- *   e.g. HOME_PERMISSIONS.ADDITIONAL_SEARCH_BULK_EMAIL from
+ *   e.g. DDS_PERMISSIONS.DOCKET_EDIT from
  *   api/constants/permissions.js. Always import from that file rather than
  *   typing the string inline, so it stays the single source of truth for
  *   what actually gets checked (permissions/role_permissions are maintained
