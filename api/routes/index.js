@@ -2,6 +2,7 @@ import userRoutes from "./userRoutes.js";
 import authRoutes from "./authRoutes.js";
 import dashboardRoutes from "./dashboardRoutes.js";
 import ddsForm1Routes from "./ddsForm1Routes.js";
+import docketDetailPageRoutes from "./docketDetailPageRoutes.js";
 import notFoundHandler from "./notFoundHandler.js";
 
 const routes = (app) => {
@@ -9,6 +10,7 @@ const routes = (app) => {
   app.use("/api/auth", authRoutes);
   app.use("/dashboard", dashboardRoutes);
   app.use("/dds-form1", ddsForm1Routes);
+  app.use("/docketDetail", docketDetailPageRoutes);
   // 404 handler (For undefined routes)
   app.use(notFoundHandler);
 };

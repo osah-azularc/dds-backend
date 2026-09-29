@@ -14,10 +14,18 @@ import { logger } from '../../config/winstonLogger.js';
  * then filter Form1Docket by them" shape.
  */
 
+// Matches the field list of legacy's DdsController::searchResultddsAction()
+// SELECT (docketnumber/ecourtCaseid included even though DDS's own React grid
+// doesn't render every one of these yet -- see SearchResultsColumns.jsx --
+// so this response stays a faithful port of the legacy contract rather than
+// only what today's UI happens to consume).
 const RESPONSE_ATTRIBUTES = [
-  'form1Id', 'caseName', 'refAgency', 'caseType',
+  'form1Id', 'ecourtCaseid', 'docketNumber', 'docketClerk', 'hearingReqBy',
+  'caseName', 'refAgency', 'caseType', 'caseFileType',
   'dateReceivedByOSAH', 'dateRequested', 'hearingDate', 'hearingTime',
-  'county', 'hearingSite', 'judge', 'status', 'agencyRefNumber',
+  'county', 'hearingSite', 'hearingMode', 'judge', 'judgeAssistant',
+  'hearingRequestedDate', 'others', 'docketCreatedDate',
+  'status', 'agencyRefNumber',
 ];
 
 const buildQueryOptions = (additionalCondition, whereConditions) => {
