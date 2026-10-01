@@ -54,16 +54,28 @@ const optionalEmail = Joi.string()
 const optionalText = (max) => Joi.string().max(max).allow('', null).optional();
 
 // Required-field set matches form1205ValidationRules.js's own GEORGIA_FLAG/PRECINCT/CITY/
-// STATE/ZIP_CODE_VALIDATION_REQUIRED constants (legacy's add_1205 class set).
+// STATE/ZIP_CODE_VALIDATION_REQUIRED constants (legacy's add_1205 class set) -- but, like that
+// frontend rule set (see useForm1205Form.js/form1205SubmitValidation.js), only actually
+// enforced when `buttonStatus` is 'submit'. Save For Later deliberately allows an
+// incomplete-but-not-malformed Officer Information draft, so these same fields stay merely
+// optional (still format/length-checked) while saving.
+const requiredWhenSubmitting = (schema, submitSchema, message) =>
+  Joi.when('buttonStatus', {
+    is: 'submit',
+    then: submitSchema.messages({ 'any.required': message }),
+    otherwise: schema,
+  });
+
 const officerDetailsSchema = Joi.object({
-  lastName: nameSchema.messages({ 'any.required': 'Last Name is required' }),
-  firstName: nameSchema.messages({ 'any.required': 'First Name is required' }),
+  lastName: requiredWhenSubmitting(optionalName, nameSchema, 'Last Name is required'),
+  firstName: requiredWhenSubmitting(optionalName, nameSchema, 'First Name is required'),
   middleName: optionalName,
   precinct: optionalText(100),
-  isGeorgiaState: Joi.string().valid('0', '1').required().messages({
-    'any.required':
-      'Does the Officer belong to Georgia State Patrol or Georgia Department of Public Safety? is required',
-  }),
+  isGeorgiaState: requiredWhenSubmitting(
+    Joi.string().valid('0', '1').allow('', null).optional(),
+    Joi.string().valid('0', '1').required(),
+    'Does the Officer belong to Georgia State Patrol or Georgia Department of Public Safety? is required',
+  ),
   address: optionalText(100),
   city: optionalText(45),
   state: optionalText(45),
@@ -76,9 +88,18 @@ const officerDetailsSchema = Joi.object({
   // exists (from a prior save or from search1205info) -- tells addOfficerPartyDetails() to
   // update that row instead of inserting a new one. Not sent for a docket's first-ever save.
   partyId: Joi.number().integer().positive().optional(),
+  // Mirrors incidentDetailsSchema's own `buttonStatus` -- Officer Information and Incident
+  // Information save as two separate requests (see ddsForm1205Controller.js), so this one
+  // needs its own copy to know whether Precinct/City/State/Zip (assertOfficerRequireds below)
+  // and Last/First Name/Georgia State Patrol are actually required for this request.
+  buttonStatus: Joi.string().valid('save', 'submit').required().messages({
+    'any.required': 'buttonStatus is required',
+  }),
 }).unknown(false);
 
 function assertOfficerRequireds(officerDetails) {
+  if (officerDetails.buttonStatus !== 'submit') return;
+
   const missing = [];
   if (!officerDetails.precinct) missing.push('Precinct');
   if (!officerDetails.city) missing.push('City');
@@ -118,6 +139,12 @@ const incidentDetailsSchema = Joi.object({
   // The Officer party's own party_id (see officerDetailsSchema's `partyId`) -- links the
   // offence row back to the officer it's about, replacing legacy's own broken sno/officerrid.
   officerId: Joi.number().integer().positive().optional(),
+  // "Is this a new party or new address?" (Officer Information) -- legacy persists this on
+  // form1_dds_1205_offence.is_new_officer (DdsForm1Controller.php's own search1205form query
+  // selects `fdo.is_new_officer`), not form1_parties, since it's a one-off UI toggle rather
+  // than data about the officer themselves. Read back on load so it doesn't reset to "No" (and
+  // re-disable the whole Officer Information section) every time the screen reopens.
+  isNewOfficer: Joi.string().valid('0', '1').allow('', null).optional(),
   buttonStatus: Joi.string().valid('save', 'submit').required().messages({
     'any.required': 'buttonStatus is required',
   }),

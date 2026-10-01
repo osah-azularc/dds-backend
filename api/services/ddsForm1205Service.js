@@ -44,7 +44,11 @@ function buildOfficerFields(officerDetails) {
     email: toNullable(officerDetails.email),
     fax: toNullable(officerDetails.fax),
     phone: toNullable(officerDetails.phone),
-    isGeorgiaState: officerDetails.isGeorgiaState,
+    // is_georgia_state is a NOT NULL ENUM('0','1') column -- unlike the text columns above,
+    // it can't take `null`/`''`. ddsForm1205Validators.js only requires a real '0'/'1' answer
+    // on Submit (Save For Later allows this still being unanswered), so an empty value here
+    // falls back to the column's own default ('0'/"No") instead of a failed DB write.
+    isGeorgiaState: officerDetails.isGeorgiaState || '0',
     badgeNo: toNullable(officerDetails.badgeNo),
   };
 }
@@ -129,6 +133,10 @@ function buildIncidentFields(incidentDetails) {
     height,
     weight: toNullable(incidentDetails.weight),
     driverRequest: toNullable(incidentDetails.driverRequest),
+    // is_new_officer is a NOT NULL TINYINT (default 0) -- coerce the radio's '0'/'1' string
+    // the same way isGeorgiaState is above, rather than toNullable() (which would try to
+    // write `null` into a column that can't take it).
+    isNewOfficer: incidentDetails.isNewOfficer === '1' ? 1 : 0,
   };
 }
 
