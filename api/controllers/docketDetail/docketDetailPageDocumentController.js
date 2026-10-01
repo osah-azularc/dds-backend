@@ -95,7 +95,7 @@ export async function getDocketDocuments(req, res) {
       return mapDocumentRowToResponse(row);
     });
 
-    const documentsWithArchivedStatus = documents; //await checkAwsArchivedDocuments(documents);
+    const documentsWithArchivedStatus = await checkAwsArchivedDocuments(documents);
 
     return res.status(200).json({
       success: true,

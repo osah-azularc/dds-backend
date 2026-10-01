@@ -1,5 +1,8 @@
 import express from "express";
-import { getDocketDocuments } from "../controllers/docketDetail/docketDetailPageDocumentController.js";
+import {
+  getDocketDocuments,
+  downloadDocument,
+} from "../controllers/docketDetail/docketDetailPageDocumentController.js";
 import { getDisposition } from "../controllers/docketDetail/docketDetailPageController.js";
 import getLoggedInUserId from "../middlewares/getLoggedInUserId.js";
 
@@ -33,5 +36,12 @@ router.post("/documents", getDocketDocuments);
 // Get disposition data for a docket/Form 1 case
 // Matches Angular (DDS form1-controller.js): DynamicFactory.getdynamicdata("docketdisposition", "caseid", form1Id, "1")
 router.post("/getDisposition", getDisposition);
+
+// Download/view a document (flag distinguishes view from forced download) -- mirrors
+// ecourt-backend's own /downloadDocument + /downloadDocument/:flag (requireDownload there,
+// auth-only here per this file's own no-permission-gate convention). Ports legacy's shared
+// Osahform/downloaddocument/:id/:flag action.
+router.post("/downloadDocument", downloadDocument);
+router.post("/downloadDocument/:flag", downloadDocument);
 
 export default router;

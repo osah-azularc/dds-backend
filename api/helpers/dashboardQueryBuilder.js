@@ -85,6 +85,16 @@ export const buildStatusCondition = (status) => {
     return { status: { [Op.in]: ['resubmitted', 'submitted'] } };
   }
 
+  // dds_superuser's Status filter only ever offers Open/Closed (not the full DDS status
+  // list) — legacy's searchresultsupAction maps these the same way as the NA/blank case
+  // above rather than an equality match, see SuperuserController.php's searchresultsupAction.
+  if (status.toLowerCase() === 'open') {
+    return { status: { [Op.ne]: 'Closed' } };
+  }
+  if (status.toLowerCase() === 'closed') {
+    return { status: 'Closed' };
+  }
+
   return { status };
 };
 
@@ -166,15 +176,21 @@ export const buildGeneralSearchConditions = (condition) => {
     }
   }
 
-  if (condition.refAgency) {
+  // Defaults to DDS+DPS when not given a specific agency, matching legacy's
+  // searchresultsupAction (SuperuserController.php): refagency IN ('DDS','DPS') unless the
+  // Agency dropdown picked one specifically.
+  if (condition.refAgency && (!Array.isArray(condition.refAgency) || condition.refAgency.length > 0)) {
     const refAgencyCondition = buildArrayCondition('refAgency', condition.refAgency);
     if (refAgencyCondition) whereConditions.push(refAgencyCondition);
+  } else {
+    whereConditions.push({ refAgency: { [Op.in]: ['DDS', 'DPS'] } });
   }
 
-  if (condition.caseType) {
-    const caseTypeCondition = buildArrayCondition('caseType', condition.caseType);
-    if (caseTypeCondition) whereConditions.push(caseTypeCondition);
-  }
+  // Always 'ALS' regardless of what's sent -- matches legacy's own hardcoded
+  // doc.casetype='ALS' in searchresultsupAction (the Case Type dropdown's value is never
+  // actually read there). DDS's own docket-creation flow is ALS-only too (constants.js's
+  // CASE_TYPE), so every docket this search can return already is one.
+  whereConditions.push({ caseType: 'ALS' });
 
   // Single-select filters
   if (condition.judge) {
@@ -214,6 +230,14 @@ export const buildGeneralSearchConditions = (condition) => {
 
   if (condition.dateRequestedFrom || condition.dateRequestedTo) {
     const dateConditions = buildDateRangeCondition('daterequested', condition.dateRequestedFrom, condition.dateRequestedTo);
+    whereConditions.push(...dateConditions);
+  }
+
+  // Closed Date range — superuser-only filter (searchresultsupAction's closedate_From/_To),
+  // independent of and combinable with the Status filter above (e.g. Status=Closed AND a
+  // specific closed-date window).
+  if (condition.closedDateFrom || condition.closedDateTo) {
+    const dateConditions = buildDateRangeCondition('closed_date', condition.closedDateFrom, condition.closedDateTo);
     whereConditions.push(...dateConditions);
   }
 

@@ -2,6 +2,8 @@ import Docket from '../models/Docket.js';
 import PeopleDetails from '../models/PeopleDetails.js';
 import MinorDetails from '../models/MinorDetails.js';
 import DocketDisposition from '../models/DocketDisposition.js';
+import DocumentsTable from '../models/DocumentsTable.js';
+import { checkAwsArchivedDocuments } from '../../helpers/s3.js';
 import Casetypes from '../models/Casetypes.js';
 import Agency from '../models/admin/agencyModel.js';
 import CaseTypeStyling from '../models/admin/caseTypeStylingModel.js';
@@ -52,6 +54,20 @@ const mapDispositionRow = (dispositionRow) => {
   return {
     ...row,
     caseId: normalizeId(row?.caseId),
+  };
+};
+
+const mapDocumentRow = (documentRow) => {
+  const row = documentRow?.toJSON ? documentRow.toJSON() : documentRow;
+
+  return {
+    ...row,
+    documentId: normalizeId(row?.documentId),
+    caseId: normalizeId(row?.caseId),
+    docketCaseId: normalizeId(row?.docketCaseId),
+    casetypeDocId: normalizeId(row?.casetypeDocId),
+    createdBy: normalizeId(row?.createdBy),
+    modifiedBy: normalizeId(row?.modifiedBy),
   };
 };
 
@@ -159,7 +175,7 @@ const getCaseTypeStyling = async (firstDocketRow) => {
 };
 
 export const getSearchDocketInfoData = async (caseId) => {
-  const [docketData, peopleData, minorData, custodialParentData, docketDisposition] = await Promise.all([
+  const [docketData, peopleData, minorData, custodialParentData, docketDisposition, documentData] = await Promise.all([
     Docket.findAll({
       where: { caseId },
       include: [
@@ -189,6 +205,7 @@ export const getSearchDocketInfoData = async (caseId) => {
       },
     }),
     DocketDisposition.findAll({ where: { caseId } }),
+    DocumentsTable.findAll({ where: { caseId }, order: [['documentId', 'ASC']] }),
   ]);
 
   const firstDocketRow = docketData[0]?.toJSON ? docketData[0].toJSON() : docketData[0];
@@ -210,6 +227,9 @@ export const getSearchDocketInfoData = async (caseId) => {
   const docketDispositionFormatted = Array.isArray(docketDisposition)
     ? docketDisposition.map((dispositionRow) => mapDispositionRow(dispositionRow))
     : [];
+  const documentDataFormatted = Array.isArray(documentData)
+    ? await checkAwsArchivedDocuments(documentData.map((documentRow) => mapDocumentRow(documentRow)))
+    : [];
 
   return {
     docketData: docketDataFormatted.length > 0 ? docketDataFormatted : [],
@@ -217,6 +237,7 @@ export const getSearchDocketInfoData = async (caseId) => {
     minorData: minorDataFormatted.length > 0 ? minorDataFormatted : '',
     custodialParent: custodialParentFormatted.length > 0 ? custodialParentFormatted : '',
     docketDisposition: docketDispositionFormatted.length > 0 ? docketDispositionFormatted : null,
+    documents: documentDataFormatted,
   };
 };
 

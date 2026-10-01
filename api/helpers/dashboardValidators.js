@@ -67,6 +67,14 @@ const generalSearchConditionSchema = Joi.object({
   fromOpenCasesWithDecision: Joi.boolean().optional(),
 }).unknown(false); // ✅ Reject unknown fields - only allow fields present in frontend
 
+// dds_superuser's Additional Search Options condition -- same shared filter form as
+// generalSearchConditionSchema, plus the Closed Date range that's a superuser-only field
+// (searchresultsupAction's closedate_From/_To; see buildGeneralSearchConditions).
+const superuserSearchConditionSchema = generalSearchConditionSchema.keys({
+  closedDateFrom: dateStringDashboardSchema,
+  closedDateTo: dateStringDashboardSchema,
+});
+
 // Closed Cases Search validation schema
 const closedCasesSearchConditionSchema = Joi.object({
   // Required date range
@@ -124,6 +132,13 @@ const generalSearchSchema = Joi.object({
 // Complete Closed Cases Search validation schema
 const closedCasesSearchSchema = Joi.object({
   condition: closedCasesSearchConditionSchema.required(),
+  additionalCondition: Joi.object().optional().default({}), // No validation, pass through
+}).unknown(true); // Allow unknown fields for flexibility
+
+// Complete Superuser Search validation schema
+const superuserSearchSchema = Joi.object({
+  tableName: Joi.string().optional(), // Allow tableName but don't validate it
+  condition: superuserSearchConditionSchema.optional().default({}),
   additionalCondition: Joi.object().optional().default({}), // No validation, pass through
 }).unknown(true); // Allow unknown fields for flexibility
 
@@ -228,6 +243,65 @@ function validateClosedCasesSearch(data) {
 }
 
 /**
+ * Validate dds_superuser search request (Additional Search Options submitted while
+ * logged in as dds_superuser -- searches the broader `docket` table, not form1_docket).
+ * @param {Object} data - Request body containing condition and additionalCondition
+ * @returns {Object} - Validated and sanitized search parameters
+ */
+function validateSuperuserSearch(data) {
+  const { error, value } = superuserSearchSchema.validate(data, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new ValidationError(error.details.map((err) => err.message).join(', '), 'superuserSearch');
+  }
+
+  const condition = value.condition || {};
+  if (!hasAtLeastOneFilterValue(condition)) {
+    throw new ValidationError(
+      'Please select at least one filter to perform search',
+      'superuserSearch',
+    );
+  }
+
+  if (condition.hearingDateFrom && condition.hearingDateTo) {
+    assertValidDateRange(
+      condition.hearingDateFrom,
+      condition.hearingDateTo,
+      'Hearings Date From should not be greater than Hearing Date To',
+      'superuserSearch',
+    );
+  }
+
+  if (condition.dateReceivedByOSAHFrom && condition.dateReceivedByOSAHTo) {
+    assertValidDateRange(
+      condition.dateReceivedByOSAHFrom,
+      condition.dateReceivedByOSAHTo,
+      'Date Received From should not be greater than Date Received To',
+      'superuserSearch',
+    );
+  }
+
+  if (condition.dateRequestedFrom && condition.dateRequestedTo) {
+    assertValidDateRange(
+      condition.dateRequestedFrom,
+      condition.dateRequestedTo,
+      'Date Requested From should not be greater than Date Requested To',
+      'superuserSearch',
+    );
+  }
+
+  if (condition.closedDateFrom && condition.closedDateTo) {
+    assertValidDateRange(
+      condition.closedDateFrom,
+      condition.closedDateTo,
+      'Closed Date From should not be greater than Closed Date To',
+      'superuserSearch',
+    );
+  }
+
+  return value;
+}
+
+/**
  * Validate docket info search request
  * @param {Object} data - Request body containing tableName and condition
  * @returns {Object} - Validated and sanitized search parameters
@@ -245,10 +319,12 @@ export {
 	  validateDocketNumber,
 	  validateGeneralSearch,
 	  validateClosedCasesSearch,
+	  validateSuperuserSearch,
 	  validateDocketInfoSearch,
 	  // Search validation schemas
 	  generalSearchSchema,
 	  closedCasesSearchSchema,
+	  superuserSearchSchema,
 	  docketInfoSearchSchema,
 };
 

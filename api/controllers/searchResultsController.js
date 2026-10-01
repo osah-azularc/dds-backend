@@ -97,8 +97,8 @@ export const downloadCaseFilesAction = async (req, res) => {
       });
     }
 
-    // Get user ID from session data or JWT
-    const userId = userSessionData?.user_id || req.user?.userId || 'temp';
+    // Get user ID from session data or JWT (getLoggedInUserId sets req.userId/req.user)
+    const userId = userSessionData?.user_id || req.userId || 'temp';
     const firstName = userSessionData?.firstname || req.user?.firstName || '';
     const lastName = userSessionData?.lastname || req.user?.lastName || '';
 

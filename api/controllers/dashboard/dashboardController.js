@@ -4,9 +4,10 @@ import DocketDisposition from "../../models/DocketDisposition.js";
 import {
   validateGeneralSearch,
   validateClosedCasesSearch,
+  validateSuperuserSearch,
   validateDocketInfoSearch,
 } from "../../helpers/dashboardValidators.js";
-import { buildClosedCasesSearchConditions } from "../../helpers/dashboardQueryBuilder.js";
+import { buildClosedCasesSearchConditions, buildGeneralSearchConditions } from "../../helpers/dashboardQueryBuilder.js";
 import { buildDdsGeneralSearchConditions } from "../../helpers/ddsSearchQueryBuilder.js";
 import { runDdsGeneralSearch, handleDdsComplexSearch } from "../../helpers/ddsSearchHelper.js";
 import {
@@ -73,6 +74,67 @@ export const generalSearch = async (req, res) => {
   }
 };
 
+
+/**
+ * Superuser Search
+ * Searches the broader `docket` table (every ALS docket across DDS/DPS, not just the
+ * current user's own Form 1 entries) -- this is dds_superuser's Additional Search
+ * Options submit path, matching legacy's Superuser/searchresultsup (SuperuserController::
+ * searchresultsupAction), not the form1_docket-scoped generalSearch above.
+ *
+ * @route POST /dashboard/superuserSearchResult
+ * @param {Object} req.body.condition - Search parameters
+ * @param {Object} req.body.additionalCondition - Pagination and sorting parameters
+ * @returns {Object} - { success: boolean, data: array, total: number, error: null }
+ */
+export const superuserSearch = async (req, res) => {
+  try {
+    const validatedData = validateSuperuserSearch(req.body);
+    const { condition = {}, additionalCondition = {} } = validatedData;
+
+    const whereConditions = buildGeneralSearchConditions(condition);
+
+    const queryOptions = {
+      where: { [Op.and]: whereConditions },
+      // caseId aliased to ecourtCaseid to match the shared search-results grid's row shape
+      // (transformSearchResults reads item.ecourtCaseid for the "Docket" column and the
+      // Download Files case-id resolution) -- a superuser search result IS the docket/case
+      // row itself, so there's no separate form1Id indirection to resolve here.
+      attributes: [
+        ['caseId', 'ecourtCaseid'],
+        'caseName',
+        'refAgency',
+        'caseType',
+        'dateReceivedByOSAH',
+        'dateRequested',
+        'hearingDate',
+        'hearingTime',
+        'county',
+        'hearingSite',
+        'judge',
+        'status',
+        'closedDate',
+        'agencyRefNumber',
+      ],
+      order: [[additionalCondition.orderby || 'dateReceivedByOSAH', additionalCondition.order ? 'DESC' : 'ASC']],
+      limit: additionalCondition.length || DEFAULT_PAGE_SIZE,
+      offset: additionalCondition.start || DEFAULT_OFFSET,
+    };
+
+    const { count, rows } = await Docket.findAndCountAll(queryOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: count > 0 ? 'Data fetched successfully' : 'No results found',
+      data: count > 0 ? rows : [],
+      total: count,
+      error: null,
+    });
+  } catch (error) {
+    logger.error('❌ Error in superuserSearch:', error);
+    return handleSearchError(error, res);
+  }
+};
 
 /**
  * Closed Cases Search
@@ -156,7 +218,7 @@ export const closedCasesSearch = async (req, res) => {
  * @route POST /dashboard/searchDocketInfo
  * @param {Object} req.body.tableName - Table name (should be 'docketsearch')
  * @param {String} req.body.docketnumber - Raw docket number input (numeric or prefixed)
- * @returns {Object} - Standard response with docketData, peopleData, minorData, custodialParent, docketDisposition
+ * @returns {Object} - Standard response with docketData, peopleData, minorData, custodialParent, docketDisposition, documents
  */
 export const searchDocketInfo = async (req, res) => {
   try {
@@ -187,6 +249,7 @@ export const searchDocketInfo = async (req, res) => {
           minorData: '',
           custodialParent: '',
           docketDisposition: null,
+          documents: [],
         },
         error: error.message,
       });
